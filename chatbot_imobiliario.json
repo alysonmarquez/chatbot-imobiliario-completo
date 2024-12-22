@@ -1,0 +1,651 @@
+{
+  "name": "chatbot imobiliario",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "72d8910b-84b0-4adf-954d-c9547c8919ad",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -900,
+        280
+      ],
+      "webhookId": "c1ff2e51-605d-40c9-8f4f-0d8f736e01ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "HM5DZpGNHvXvH151",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "21124677-2eb3-452f-b043-d033b714a6e1",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        680
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "VG3thaYMgsGCBNF6",
+          "name": "Groq account"
+        }
+      },
+      "notes": "interaja com o cliente esclarecendo suas duvidas e lhe indicando o melhor imovel de acordo com o gosto do cliente"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+      },
+      "id": "6e99c7b3-e3d6-4a83-8d26-d49e2f42d418",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1060,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "pesquisar o imovel de acordo com as informações passadas pelo cliente. colete o endereço, numero de contato.",
+        "url": "=https://www.olx.com.br/imoveis"
+      },
+      "id": "ae3b8b1d-66e1-4483-b61b-4d55bf02ceda",
+      "name": "HTTP Request",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -920,
+        680
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8b5493c3-9953-4c41-9b9a-8f4fec6afc09",
+      "name": "Customer Datastore (n8n training)",
+      "type": "n8n-nodes-base.n8nTrainingCustomerDatastore",
+      "typeVersion": 1,
+      "position": [
+        20,
+        420
+      ],
+      "notes": "quando o cliente agendar uma visita ao imóvel. você tem que salvar o endereço do imóvel, nome do cliente, data da visita, email e enviar os dados para o chatbot @AIagenteImobili_bot no telegram"
+    },
+    {
+      "parameters": {},
+      "id": "87154c1d-ffe7-41e7-a1d1-3dc170be83d7",
+      "name": "confirmar agendamento",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a3d62210-e244-4b27-892f-ca38f88f48d3",
+      "name": "não confirmou agendamento",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        580,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ebf26d0d-40b0-41dd-99d3-0bcbdb6af75d",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        800,
+        740
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c16be9f2-5399-43fc-94d2-bac7b4696b78",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1160,
+        760
+      ],
+      "webhookId": "dbe45475-8cb7-4930-beeb-9eebb61c69c4"
+    },
+    {
+      "parameters": {},
+      "id": "c1fd94e2-6e8a-41a9-bf36-c30cc6b76791",
+      "name": "agendamento confirmar",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1160,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=Você é um assistente virtual imobiliário.\nprimeiro comprimente(saudação) e pergunte o nome do cliente, email e tipo de imovel que ele estar procurando\n\nAjude a encontrar imóveis ideais para leads com base em seu perfil. Use dados como tipo de imóvel, localização, orçamento e preferências para sugerir opções personalizadas. Seja objetivo, claro e envolvente nas sugestões. Caso necessário, faça perguntas para entender melhor o perfil do cliente. Você está se comunicando com um usuário chamado {{ $json.message.from.first_name }}. Sempre se dirija ao usuário pelo nome. Você deve coletar informações básicas de um lead (nome, e-mail, tipo de imóvel procurado) e armazenar os dados em uma base.\nVocê deve qualificar o lead, identificando o nível de interesse e filtrando aqueles mais promissores para contato com o corretor.\nVocê deve sugerir imóveis com base no perfil do lead, utilizando integrações com fontes externas (APIs ou outras ferramentas) e inteligência artificial para personalização.\nuse o site: https://www.olx.com.br/imoveis para lhe auxiliar no atendimento."
+        }
+      },
+      "id": "97ca528f-b342-4545-804d-bfbaad3bf40e",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -700,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "=2004603935",
+        "text": "={{ ($json.output || 'Default message') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "26c43b15-2442-4e9d-afab-8683513e5618",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -340,
+        440
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "HM5DZpGNHvXvH151",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0bb98713-40a3-4304-8685-527fd64cf8fe",
+              "leftValue": "={{ $json.name }}{{ $json.email }}{{ $json.notes }}{{ $json.country }}{{ $json.created }}{{ $json.id }}{{ $('Telegram Trigger').item.json.message.text }}",
+              "rightValue": "confirmar agendamento",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "61bcb430-838d-4ab3-bbe7-4e2cb406bbe2",
+              "leftValue": "={{ $json.id }}{{ $json.name }}{{ $json.email }}{{ $json.notes }}{{ $json.country }}{{ $json.created }}",
+              "rightValue": "não confirmou agendamento",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "74765d88-3a1a-4cf7-baad-10030bf53aee",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        420
+      ],
+      "notes": "quando cliente confirmar agendamento. guardar dados de nome, email e endereço do imovel."
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "salvar dados do cliente: email, nome e endereço do imovel escolhido pelo cliente",
+        "chatId": "=@AIagenteImobili_bot",
+        "text": "dados:",
+        "additionalFields": {}
+      },
+      "id": "aa6d1b88-cce6-45fc-89db-75643471ec85",
+      "name": "salvar dados",
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        -1220,
+        860
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "U8zsEfPaFowuLdro",
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "teste_funcao",
+        "description": "adionar a cor azul quando o cliente ficar interessado no imovel",
+        "jsCode": "// Lista de todas as cores disponíveis\nconst allColors = [\"red\", \"blue\", \"green\", \"yellow\", \"pink\", \"purple\", \"orange\", \"black\", \"white\", \"gray\"];\n\n// Filtrar as cores a serem excluídas da lista\nconst excludedColors = query.split(\",\").map(color => color.trim().toLowerCase());\nconst availableColors = allColors.filter(color => !excludedColors.includes(color));\n\n// Se não houver cores disponíveis após a exclusão\nif (availableColors.length === 0) {\n  return \"Nenhuma cor disponível após excluir as cores especificadas.\";\n}\n\n// Retornar uma cor aleatória da lista filtrada\nreturn availableColors[Math.floor(Math.random() * availableColors.length)];\n"
+      },
+      "id": "3937c632-f6e2-4014-b105-e06b859be20b",
+      "name": "Code Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        -920,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "allypda@gmail.com",
+          "mode": "id"
+        },
+        "start": "2024-12-16T03:23:00",
+        "end": "2024-12-16T03:22:57",
+        "additionalFields": {}
+      },
+      "id": "3e3556ab-8e1a-4575-b3b4-4562cc70bb2d",
+      "name": "Google Calendar",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.2,
+      "position": [
+        -1080,
+        860
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "leCKl5maqmHkQYxq",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "usar o chatgpt para auxiliar na interação do chatbot com o cliente",
+        "url": "https://chatgpt.com/"
+      },
+      "id": "7fc1f11d-71ff-47d0-997f-7e97668f1d71",
+      "name": "chatGPT",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -780,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "usar para interagir com o cliente.",
+        "url": "https://chatgpt.com/"
+      },
+      "id": "9fc2d53b-5d79-4e0a-ba84-28cf907285e3",
+      "name": "iteração",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -780,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendChatAction",
+        "chatId": "@AIagenteImobili_bot"
+      },
+      "id": "850ccf95-d9fd-4d84-884f-2532d02e207f",
+      "name": "Telegram1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "HM5DZpGNHvXvH151",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "forçar o enveio da mensagem para o chat bot"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1-mini-2024-09-12",
+          "mode": "list",
+          "cachedResultName": "O1-MINI-2024-09-12"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $('AI Agent').item.json.output }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {}
+      },
+      "id": "86d6102a-3f42-464f-93ba-bdabbd76c4ae",
+      "name": "OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [
+        -80,
+        760
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "GQQyeh7wHOqOMqPx",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 169191077,
+          "message": {
+            "message_id": 620,
+            "from": {
+              "id": 2004603935,
+              "is_bot": false,
+              "first_name": "Alyson",
+              "last_name": "Marquez",
+              "username": "alysonmarquez",
+              "language_code": "pt-br"
+            },
+            "chat": {
+              "id": 2004603935,
+              "first_name": "Alyson",
+              "last_name": "Marquez",
+              "username": "alysonmarquez",
+              "type": "private"
+            },
+            "date": 1734330590,
+            "text": "quero alugar um imovel em teresina"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Datastore (n8n training)": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "confirmar agendamento": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "não confirmou agendamento": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "agendamento confirmar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agendamento confirmar": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Customer Datastore (n8n training)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "confirmar agendamento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "não confirmou agendamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "salvar dados": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chatGPT": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "iteração": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2868916a-c4d6-4d3d-84c9-0cb762de131a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dc7bb5e3e76a67ab21cac0a4a95988cab2ca4bbbc5ce3a8be98538ae5bd62cc1"
+  },
+  "id": "dcSiRnMNnxjg7nK8",
+  "tags": []
+}
